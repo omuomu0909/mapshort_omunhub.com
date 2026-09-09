@@ -1,0 +1,9 @@
+import type { Restaurant } from './types'
+
+export const restaurants: Restaurant[] = [
+  { id:'s', name:'sio', genre:'居酒屋・創作料理', address:'東京都渋谷区神山町 5-2', rating:4.7, reviews:128, price:'¥¥¥', distance:'210m', lat:35.6638, lng:139.6956, color:'#d97b49', video:{title:'渋谷で見つけた、秘密にしたい創作居酒屋',channel:'東京グルメ手帖',views:'12.4万',age:'2日前',thumbnail:'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=640&q=80'} },
+  { id:'sushi', name:'鮨 銀座おのでら', genre:'寿司', address:'東京都渋谷区宇田川町 14-1', rating:4.5, reviews:364, price:'¥¥¥¥', distance:'450m', lat:35.6614, lng:139.6992, color:'#5d87a6', video:{title:'一貫1,000円台から。渋谷の本格江戸前鮨',channel:'寿司ログ',views:'8.9万',age:'5日前',thumbnail:'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=640&q=80'} },
+  { id:'chill', name:'CHILL OUT COFFEE', genre:'カフェ', address:'東京都渋谷区富ヶ谷 1-6-8', rating:4.6, reviews:89, price:'¥¥', distance:'680m', lat:35.6678, lng:139.6904, color:'#789b79', video:{title:'朝の渋谷で行きたい、静かなコーヒースタンド',channel:'休日の喫茶店',views:'3.2万',age:'1週間前',thumbnail:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=640&q=80'} },
+  { id:'yaki', name:'炭火焼肉 にくすけ', genre:'焼肉', address:'東京都渋谷区道玄坂 2-18-11', rating:4.4, reviews:211, price:'¥¥¥', distance:'720m', lat:35.6591, lng:139.6972, color:'#b65c4b', video:{title:'これが渋谷のコスパ焼肉。厚切り牛タンが最高',channel:'肉兄弟',views:'5.8万',age:'3日前',thumbnail:'https://images.unsplash.com/photo-1544025162-d76694265947?w=640&q=80'} },
+  { id:'ramen', name:'らぁめん はやし', genre:'ラーメン', address:'東京都渋谷区道玄坂 2-8-5', rating:4.3, reviews:542, price:'¥', distance:'820m', lat:35.6576, lng:139.6975, color:'#d6a04e', video:{title:'行列必至！渋谷で10年以上愛される濃厚らーめん',channel:'麺チャンネル',views:'21万',age:'2週間前',thumbnail:'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=640&q=80'} },
+]
