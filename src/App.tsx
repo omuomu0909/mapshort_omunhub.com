@@ -1,13 +1,9 @@
-import { useState } from 'react'
-import { MapContainer, TileLayer, Circle, Marker, useMap } from 'react-leaflet'
-import L from 'leaflet'
+import { useMemo, useState } from 'react'
 import { Search, LocateFixed, SlidersHorizontal, Play, Star, MapPin, Clock3, ArrowUpRight, Utensils, ChevronDown, X, Menu, Sparkles } from 'lucide-react'
 import { restaurants } from './data'
 import type { Restaurant } from './types'
 
-const center: [number, number] = [35.6638, 139.6967]
-const icon = (color: string) => L.divIcon({ className:'pin-wrap', html:`<div class="pin" style="background:${color}"><span></span></div>`, iconSize:[34,42], iconAnchor:[17,40] })
-function Recenter({ position }: { position:[number,number] }) { const map=useMap(); return <button className="locate" onClick={()=>map.setView(position,15)} aria-label="現在地へ"><LocateFixed size={18}/></button> }
+const defaultCenter = { lat: 35.6638, lng: 139.6967, label: '渋谷駅周辺' }
 
 function App() {
   const [active, setActive] = useState<Restaurant | null>(null)
@@ -16,14 +12,30 @@ function App() {
   const [genre, setGenre] = useState('すべて')
   const [searched, setSearched] = useState(false)
   const [mobileMenu, setMobileMenu] = useState(false)
+  const [location, setLocation] = useState<{lat:number;lng:number} | null>(null)
+  const [locationStatus, setLocationStatus] = useState<'idle'|'loading'|'success'|'error'>('idle')
   const genres = ['すべて','寿司','焼肉','ラーメン','カフェ','居酒屋・創作料理']
   const filtered = restaurants.filter(r=>(genre==='すべて'||r.genre.includes(genre)) && (!query||r.name.includes(query)||r.genre.includes(query)))
   const search = () => { setSearched(true); setActive(null) }
+  const locateMe = () => {
+    if (!navigator.geolocation) { setLocationStatus('error'); return }
+    setLocationStatus('loading')
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => { setLocation({ lat: coords.latitude, lng: coords.longitude }); setLocationStatus('success') },
+      () => setLocationStatus('error'),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+    )
+  }
+  const mapSrc = useMemo(() => {
+    const target = location ?? defaultCenter
+    return `https://www.google.com/maps?q=${target.lat},${target.lng}&z=15&output=embed`
+  }, [location])
+  const locationMessage = locationStatus === 'loading' ? '現在地を取得中…' : locationStatus === 'success' ? '現在地周辺を表示中' : locationStatus === 'error' ? '位置情報を取得できませんでした。ブラウザの設定を確認してください。' : ''
   return <div className="app">
     <header><div className="brand"><div className="brand-mark"><Utensils size={20}/></div><div><b>omunhub</b><small>食のショート動画マップ</small></div></div><nav><a className="active">探す</a><a>保存したお店</a><a>使い方</a></nav><button className="mobile-menu" onClick={()=>setMobileMenu(!mobileMenu)}><Menu/></button><div className="header-actions"><button className="icon-btn"><Sparkles size={17}/> おすすめ</button><button className="avatar">T</button></div></header>
     {mobileMenu&&<div className="mobile-nav"><a className="active">探す</a><a>保存したお店</a><a>使い方</a></div>}
     <main><section className="hero"><div><p className="eyebrow"><span/>TODAY'S FOOD DISCOVERY</p><h1>気になる街の、<br/><em>おいしい瞬間</em>を探そう。</h1><p className="lead">マップでエリアを選んで、リアルな食のショート動画から<br className="desktop"/>次に行きたいお店を見つけよう。</p></div><div className="search-area"><div className="search-box"><Search size={19}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&search()} placeholder="店名・ジャンルで検索"/><button onClick={search}>検索</button></div><div className="filters">{genres.map(g=><button key={g} className={genre===g?'selected':''} onClick={()=>setGenre(g)}>{g}</button>)}<button className="filter-btn"><SlidersHorizontal size={15}/> 絞り込み</button></div></div></section>
-      <section className="workspace"><div className="map-panel"><iframe className="google-map" title="Google Maps 渋谷駅周辺" src="https://www.google.com/maps?q=%E6%B8%8B%E8%B0%B7%E9%A7%85%20%E9%A3%B2%E9%A3%9F%E5%BA%97&z=15&output=embed" loading="lazy" referrerPolicy="no-referrer-when-downgrade"/><div className="map-label"><MapPin size={16}/> 渋谷駅周辺 <span>Google Maps</span></div><button className="map-search" onClick={search}><Search size={17}/> このエリアで探す</button></div>
+      <section className="workspace"><div className="map-panel"><iframe className="google-map" title="Google Maps 現在地周辺" src={mapSrc} loading="lazy" referrerPolicy="no-referrer-when-downgrade"/><div className="map-label"><MapPin size={16}/> {location ? '現在地周辺' : defaultCenter.label} <span>Google Maps</span></div><button className="locate-me" onClick={locateMe} disabled={locationStatus==='loading'}><LocateFixed size={16}/> {locationStatus==='loading' ? '取得中' : '現在地を表示'}</button>{locationMessage&&<div className={`location-message ${locationStatus==='error'?'error':''}`}>{locationMessage}</div>}<button className="map-search" onClick={search}><Search size={17}/> このエリアで探す</button></div>
         <aside className="results"><div className="results-head"><div><span className="count">{filtered.length}件</span><h2>{searched?'このエリアの飲食店一覧':'渋谷駅周辺の飲食店'}</h2></div><button className="sort">おすすめ順 <ChevronDown size={15}/></button></div><p className="result-note">Google Mapsの店舗情報とYouTube Shortsをまとめて表示</p><div className="cards">{filtered.length===0?<div className="empty">条件に一致するお店がありません。<br/>検索条件を変えてみてください。</div>:filtered.map(r=><RestaurantCard key={r.id} restaurant={r} active={active?.id===r.id} onClick={()=>setActive(r)} onPlay={()=>setPlaying(r)}/>)}</div></aside>
       </section>
     </main>

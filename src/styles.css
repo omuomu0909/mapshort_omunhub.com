@@ -4,6 +4,7 @@
 
 /* Google Maps embed and in-page YouTube player */
 .google-map{height:100%;width:100%;display:block;border:0}
+.locate-me{position:absolute;right:18px;bottom:18px;z-index:2;background:#fff;color:#26313b;border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;box-shadow:0 2px 8px #26313b33}.locate-me:disabled{opacity:.7;cursor:wait}.location-message{position:absolute;left:50%;top:18px;transform:translateX(-50%);z-index:2;background:#fff;color:#657078;border-radius:6px;padding:9px 13px;font-size:11px;box-shadow:0 2px 8px #26313b33;white-space:nowrap}.location-message.error{color:#b4533a}
 .video-link{background:none;padding:0;text-align:left;width:100%;cursor:pointer}
 .video-link:hover{text-decoration:underline}
 .video-overlay{position:fixed;inset:0;background:#26313b66;z-index:2000;display:grid;place-items:center;padding:20px}

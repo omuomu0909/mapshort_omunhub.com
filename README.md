@@ -9,4 +9,4 @@ npm install
 npm run dev
 ```
 
-本番ビルドは `npm run build` で `dist/` に出力されます。地図表示にはOpenStreetMapを利用し、動画カードからYouTube検索結果へ遷移します。
+本番ビルドは `npm run build` で `dist/` に出力されます。Google Maps埋め込みとブラウザのGeolocation APIを利用し、動画カードからYouTube動画をアプリ内で再生します。現在地機能はHTTPS環境（本番のCloudflare Pagesなど）と、ブラウザの位置情報許可が必要です。
