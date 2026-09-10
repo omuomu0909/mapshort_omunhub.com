@@ -1,9 +1,47 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Search, LocateFixed, SlidersHorizontal, Play, Star, MapPin, Clock3, ArrowUpRight, Utensils, ChevronDown, X, Menu, Sparkles } from 'lucide-react'
 import { restaurants } from './data'
 import type { Restaurant } from './types'
 
 const defaultCenter = { lat: 35.6638, lng: 139.6967, label: '渋谷駅周辺' }
+
+declare global { interface Window { google?: any } }
+
+function GoogleMap({ center, onMarkerClick }: { center: {lat:number;lng:number}; onMarkerClick: (restaurant: Restaurant) => void }) {
+  const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstance = useRef<any>(null)
+  const [ready, setReady] = useState(false)
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+
+  useEffect(() => {
+    if (!apiKey || window.google?.maps) { setReady(Boolean(window.google?.maps)); return }
+    const existing = document.querySelector('script[data-google-maps]')
+    if (existing) { existing.addEventListener('load', () => setReady(true)); return () => existing.removeEventListener('load', () => setReady(true)) }
+    const script = document.createElement('script')
+    script.dataset.googleMaps = 'true'
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+    script.async = true
+    script.defer = true
+    script.onload = () => setReady(true)
+    document.head.appendChild(script)
+  }, [apiKey])
+
+  useEffect(() => {
+    if (!ready || !mapRef.current || !window.google?.maps) return
+    const position = { lat: center.lat, lng: center.lng }
+    if (!mapInstance.current) {
+      mapInstance.current = new window.google.maps.Map(mapRef.current, { center: position, zoom: 15, mapTypeControl: false, streetViewControl: false, fullscreenControl: false })
+      restaurants.forEach((restaurant) => {
+        const marker = new window.google.maps.Marker({ position: { lat: restaurant.lat, lng: restaurant.lng }, map: mapInstance.current, title: restaurant.name })
+        marker.addListener('click', () => onMarkerClick(restaurant))
+      })
+    } else mapInstance.current.setCenter(position)
+  }, [ready, center.lat, center.lng, onMarkerClick])
+
+  if (!apiKey) return <iframe className="google-map" title="Google Maps 飲食店マップ" src={`https://www.google.com/maps?q=${center.lat},${center.lng}&z=15&output=embed`} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+  if (!ready) return <div className="map-fallback"><MapPin size={24}/><b>Google Mapsを読み込み中…</b><span>地図と飲食店マーカーを準備しています。</span></div>
+  return <div ref={mapRef} className="google-map" aria-label="Google Maps 飲食店マップ" />
+}
 
 function App() {
   const [active, setActive] = useState<Restaurant | null>(null)
@@ -14,9 +52,10 @@ function App() {
   const [mobileMenu, setMobileMenu] = useState(false)
   const [location, setLocation] = useState<{lat:number;lng:number} | null>(null)
   const [locationStatus, setLocationStatus] = useState<'idle'|'loading'|'success'|'error'>('idle')
+  const resultsRef = useRef<HTMLElement>(null)
   const genres = ['すべて','寿司','焼肉','ラーメン','カフェ','居酒屋・創作料理']
   const filtered = restaurants.filter(r=>(genre==='すべて'||r.genre.includes(genre)) && (!query||r.name.includes(query)||r.genre.includes(query)))
-  const search = () => { setSearched(true); setActive(null) }
+  const search = () => { setSearched(true); setActive(null); window.setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }
   const locateMe = () => {
     if (!navigator.geolocation) { setLocationStatus('error'); return }
     setLocationStatus('loading')
@@ -26,17 +65,14 @@ function App() {
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
     )
   }
-  const mapSrc = useMemo(() => {
-    const target = location ?? defaultCenter
-    return `https://www.google.com/maps?q=${target.lat},${target.lng}&z=15&output=embed`
-  }, [location])
   const locationMessage = locationStatus === 'loading' ? '現在地を取得中…' : locationStatus === 'success' ? '現在地周辺を表示中' : locationStatus === 'error' ? '位置情報を取得できませんでした。ブラウザの設定を確認してください。' : ''
+  const mapCenter = location ?? defaultCenter
   return <div className="app">
     <header><div className="brand"><div className="brand-mark"><Utensils size={20}/></div><div><b>omunhub</b><small>食のショート動画マップ</small></div></div><nav><a className="active">探す</a><a>保存したお店</a><a>使い方</a></nav><button className="mobile-menu" onClick={()=>setMobileMenu(!mobileMenu)}><Menu/></button><div className="header-actions"><button className="icon-btn"><Sparkles size={17}/> おすすめ</button><button className="avatar">T</button></div></header>
     {mobileMenu&&<div className="mobile-nav"><a className="active">探す</a><a>保存したお店</a><a>使い方</a></div>}
     <main><section className="hero"><div><p className="eyebrow"><span/>TODAY'S FOOD DISCOVERY</p><h1>気になる街の、<br/><em>おいしい瞬間</em>を探そう。</h1><p className="lead">マップでエリアを選んで、リアルな食のショート動画から<br className="desktop"/>次に行きたいお店を見つけよう。</p></div><div className="search-area"><div className="search-box"><Search size={19}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&search()} placeholder="店名・ジャンルで検索"/><button onClick={search}>検索</button></div><div className="filters">{genres.map(g=><button key={g} className={genre===g?'selected':''} onClick={()=>setGenre(g)}>{g}</button>)}<button className="filter-btn"><SlidersHorizontal size={15}/> 絞り込み</button></div></div></section>
-      <section className="workspace"><div className="map-panel"><iframe className="google-map" title="Google Maps 現在地周辺" src={mapSrc} loading="lazy" referrerPolicy="no-referrer-when-downgrade"/><div className="map-label"><MapPin size={16}/> {location ? '現在地周辺' : defaultCenter.label} <span>Google Maps</span></div><button className="locate-me" onClick={locateMe} disabled={locationStatus==='loading'}><LocateFixed size={16}/> {locationStatus==='loading' ? '取得中' : '現在地を表示'}</button>{locationMessage&&<div className={`location-message ${locationStatus==='error'?'error':''}`}>{locationMessage}</div>}<button className="map-search" onClick={search}><Search size={17}/> このエリアで探す</button></div>
-        <aside className="results"><div className="results-head"><div><span className="count">{filtered.length}件</span><h2>{searched?'このエリアの飲食店一覧':'渋谷駅周辺の飲食店'}</h2></div><button className="sort">おすすめ順 <ChevronDown size={15}/></button></div><p className="result-note">Google Mapsの店舗情報とYouTube Shortsをまとめて表示</p><div className="cards">{filtered.length===0?<div className="empty">条件に一致するお店がありません。<br/>検索条件を変えてみてください。</div>:filtered.map(r=><RestaurantCard key={r.id} restaurant={r} active={active?.id===r.id} onClick={()=>setActive(r)} onPlay={()=>setPlaying(r)}/>)}</div></aside>
+      <section className="workspace"><div className="map-panel"><GoogleMap center={mapCenter} onMarkerClick={setActive}/><div className="map-label"><MapPin size={16}/> {location ? '現在地周辺' : defaultCenter.label} <span>Google Maps</span></div><button className="locate-me" onClick={locateMe} disabled={locationStatus==='loading'}><LocateFixed size={16}/> {locationStatus==='loading' ? '取得中' : '現在地を表示'}</button>{locationMessage&&<div className={`location-message ${locationStatus==='error'?'error':''}`}>{locationMessage}</div>}<button className="map-search" onClick={search}><Search size={17}/> このエリアで探す</button></div>
+        <aside className="results" ref={resultsRef}><div className="results-head"><div><span className="count">{filtered.length}件</span><h2>{searched?'このエリアの飲食店一覧':'渋谷駅周辺の飲食店'}</h2></div><button className="sort">おすすめ順 <ChevronDown size={15}/></button></div><p className="result-note">Google Maps上の店舗をクリックするか、「このエリアで探す」で一覧を表示</p><div className="cards">{filtered.length===0?<div className="empty">条件に一致するお店がありません。<br/>検索条件を変えてみてください。</div>:filtered.map(r=><RestaurantCard key={r.id} restaurant={r} active={active?.id===r.id} onClick={()=>setActive(r)} onPlay={()=>setPlaying(r)}/>)}</div></aside>
       </section>
     </main>
     {active&&<div className="detail-overlay" onClick={()=>setActive(null)}><div className="detail" onClick={e=>e.stopPropagation()}><button className="close" onClick={()=>setActive(null)}><X/></button><div className="detail-body"><span className="tag">{active.genre}</span><h2>{active.name}</h2><div className="rating"><Star size={16} fill="currentColor"/> {active.rating} <small>({active.reviews}件)</small><span>{active.price}</span></div><p><MapPin size={15}/> {active.address}</p><button className="youtube" onClick={()=>setPlaying(active)}><Play size={17} fill="currentColor"/> この動画をアプリ内で再生 <ArrowUpRight size={15}/></button></div></div></div>}
